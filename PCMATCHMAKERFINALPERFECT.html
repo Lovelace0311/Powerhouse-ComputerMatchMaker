@@ -1,0 +1,923 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Powerhouse PC Matchmaker</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #0067b8;
+      --secondary: #004e92;
+      --bg: #fff;
+      --text: #222;
+      --badge-bg: #eaf2fa;
+      --badge-color: #1976d2;
+      --card-shadow: 0 8px 16px rgba(0,0,0,0.07);
+      --card-radius: 18px;
+      --error: #c62828;
+    }
+    html.dark {
+      --bg: #222f3e;
+      --text: #eee;
+      --badge-bg: #273c75;
+      --badge-color: #f5f6fa;
+    }
+    body, #pc-quiz {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    }
+    #pc-quiz {
+      max-width: 700px;
+      margin: auto;
+      transition: background 0.4s, color 0.4s;
+    }
+    .quiz-progress {
+      display: flex;
+      align-items: center;
+      margin: 20px 0 24px;
+      gap: 8px;
+    }
+    .step-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #d0d8e0;
+    }
+    .step-dot.active {
+      background: var(--primary);
+    }
+    .progress-bar {
+      flex:1;
+      height: 6px;
+      border-radius: 4px;
+      background: #d0d8e0;
+      margin: 0 8px;
+      overflow: hidden;
+      position: relative;
+    }
+    .progress-bar-fill {
+      background: var(--primary);
+      height: 100%;
+      border-radius: 4px;
+      transition: width 0.4s;
+      position: absolute;
+      left: 0;
+      top: 0;
+    }
+    .progress-text {
+      font-size: 1.1em;
+      margin-left: 12px;
+    }
+    .dark-mode-toggle {
+      float: right;
+      margin-top: -32px;
+      margin-right: 10px;
+      font-size: 1.3em;
+      cursor: pointer;
+    }
+    .greet-user {
+      font-size: 1.2em;
+      margin-bottom: 14px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    .pc-question {
+      margin-bottom: 20px;
+      padding: 24px;
+      background: var(--bg);
+      border-radius: var(--card-radius);
+      box-shadow: var(--card-shadow);
+      opacity: 0;
+      transform: translateY(20px);
+      animation: fadeInUp 0.4s forwards;
+    }
+    @keyframes fadeInUp { to { opacity: 1; transform: translateY(0); } }
+    .pc-options {
+      display: grid;
+      grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .pc-option {
+      border: 2px solid #ccc;
+      border-radius: 12px;
+      padding: 18px 10px;
+      cursor: pointer;
+      background: #fafafa;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
+    }
+    .pc-option:hover {
+      border-color: var(--secondary);
+      background: #e6f1fb;
+      box-shadow: 0 2px 10px rgba(0,103,184,0.07);
+    }
+    .pc-option.active {
+      border-color: var(--primary);
+      background: #d0e9ff;
+      font-weight: bold;
+      box-shadow: 0 4px 14px rgba(0,103,184,0.09);
+    }
+    .pc-option i {
+      font-size: 1.6em;
+      color: var(--primary);
+    }
+    .pc-nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 24px;
+    }
+    .pc-btn {
+      background: var(--primary);
+      color: white;
+      padding: 14px 24px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 17px;
+      flex: 1;
+      margin: 0 5px;
+      transition: background 0.25s, transform 0.2s;
+      font-family: inherit;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
+    .pc-btn:hover:not(:disabled) {
+      background: var(--secondary);
+      transform: translateY(-1px);
+    }
+    .pc-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .pc-btn + .pc-btn { margin-left: 14px;}
+    .pc-results, .quiz-review {
+      background: #f0f4f7;
+      padding: 24px;
+      border-radius: var(--card-radius);
+      box-shadow: 0 0 12px rgba(0,0,0,0.05);
+      animation: fadeInUp 0.4s;
+    }
+    .quiz-review {
+      margin-bottom: 24px;
+      background: #eaf2fa;
+    }
+    .review-badge {
+      display: inline-block;
+      margin-right: 10px;
+      padding: 4px 12px;
+      border-radius: 10px;
+      background: #eaf2fa;
+      color: #1976d2;
+      font-size: 1em;
+      font-weight: 600;
+    }
+    .pc-card {
+      display: flex;
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 28px;
+      padding: 20px 16px;
+      border-radius: 13px;
+      background: var(--bg);
+      margin-bottom: 14px;
+      box-shadow: var(--card-shadow);
+      border: 1.5px solid #d0d0d0;
+    }
+    .pc-card-img {
+      min-width: 170px;
+      max-width: 200px;
+      max-height: 200px;
+      border-radius: 11px;
+      background: #f5f5f5;
+      object-fit: contain;
+      border: 1px solid #eee;
+      padding: 10px;
+      margin-right: 0;
+      margin-bottom: 0;
+      display: block;
+    }
+    .pc-card-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    .pc-title {
+      font-size: 1.7em;
+      font-weight: 700;
+      margin-bottom: 9px;
+      color: var(--primary);
+      letter-spacing: -0.01em;
+      line-height: 1.15;
+    }
+    .pc-badges {
+      margin-bottom: 8px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .badge {
+      display: inline-block;
+      margin-bottom: 2px;
+      padding: 2px 10px;
+      border-radius: 8px;
+      background: var(--badge-bg);
+      color: var(--badge-color);
+      font-size: 0.78em;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      line-height: 1.3;
+      border: none;
+      opacity: 0.8;
+    }
+    .badge i { margin-right: 4px;}
+    .pc-specs {
+      font-size: 1.08em;
+      color: #444;
+      margin-bottom: 10px;
+      margin-top: 4px;
+      line-height: 1.5;
+    }
+    .pc-actions {
+      margin-top: 5px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .buy-btn {
+      background: #1976d2;
+      color: #fff;
+      border-radius: 8px;
+      padding: 10px 28px;
+      font-size: 1.13em;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+      box-shadow: 0 2px 8px rgba(0,103,184,0.08);
+      font-family: inherit;
+      letter-spacing: 0.01em;
+      display: inline-block;
+    }
+    .buy-btn:hover { background: #004e92;}
+    .email-btn {
+      background: #fbc02d;
+      color: #333;
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 1.13em;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: background 0.2s;
+      box-shadow: 0 2px 8px rgba(251,192,45,0.08);
+      font-family: inherit;
+      letter-spacing: 0.01em;
+      display: inline-block;
+    }
+    .email-btn:hover { background: #f9a825;}
+    .error-message { color: var(--error); font-weight: bold; font-size: 1.05em; margin-bottom: 15px;}
+    @media (max-width: 700px) {
+      .pc-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+      .pc-card-img {
+        max-width: 100%;
+        min-width: 100px;
+        max-height: 150px;
+        margin-bottom: 8px;
+      }
+      .pc-card-content { width: 100%;}
+    }
+    .welcome-screen {
+      background: #eaf2fa;
+      border-radius: 18px;
+      padding: 32px 24px;
+      margin: 32px auto 10px;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.07);
+      max-width: 380px;
+      text-align: center;
+      font-family: inherit;
+    }
+    .welcome-screen input[type="text"] {
+      font-size: 1.15em;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1.5px solid #1976d2;
+      margin: 13px 0 22px;
+      width: 80%;
+      font-family: inherit;
+      letter-spacing: 0.01em;
+    }
+    .welcome-screen .pc-btn {
+      width: 80%;
+      margin: 0 auto;
+      font-family: inherit;
+      font-size: 18px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 10px;
+      padding: 14px 0;
+      border: none;
+      cursor: pointer;
+      transition: background 0.25s, transform 0.2s;
+      box-shadow: 0 2px 10px rgba(0,103,184,0.07);
+    }
+    .welcome-screen .pc-btn:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .welcome-screen .pc-btn:hover:not(:disabled) {
+      background: var(--secondary);
+      transform: translateY(-1px);
+    }
+    .powerhouse-title {
+      font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+      font-size: 2em;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 10px;
+      letter-spacing: -0.015em;
+    }
+  </style>
+</head>
+<body>
+<div id="pc-quiz"></div>
+<script>
+let step = 0;
+let answers = {};
+let reviewMode = false;
+let matchResults = null;
+let errorMatch = false;
+let darkMode = false;
+let userName = "";
+let welcomeStep = true;
+
+const products = [
+  // [All 39 products with short, readable spec summaries, as in previous messages]
+  // For brevity, I will include just a few sample entries. You should use your full product array here.
+  { name:"ThinkCentre M90s", price:"£449", url:"https://www.powerhouse.je/computing-c3/computing-c13/desktop-pcs-c16/thinkcentre-m90s-intel-core-i5-8gb-ram-256gb-ssd-win-10-pro-mini-desktop-p24570", img:"https://www.powerhouse.je/images/products/medium/1729069246-98632200.jpg", tags:["desktop","work","basics","light","desk","performance","security"], specs:"Intel Core i5 | 8GB RAM | 256GB SSD | Integrated Graphics | Windows 10 Pro" },
+  { name:"Mac Mini M4", price:"£599", url:"https://www.powerhouse.je/computing-c3/apple-c188/imacs-c154/mac-mini-m4-16gb-ram-256gb-ssd-p24655", img:"https://www.powerhouse.je/images/products/medium/1731492991-87940300.jpg", tags:["desktop","mac","creating","entertainment","light","desk","performance","security"], specs:"Apple M4 | 16GB RAM | 256GB SSD | Integrated Graphics | macOS" },
+  { name:"ION Desktop PC", price:"£349", url:"https://www.powerhouse.je/computing-c3/computing-c13/desktop-pcs-c16/ion-desktop-pc-ryzen-3-8gb-ram-256gb-ssd-wifi-windows-11-p25347", img:"https://www.powerhouse.je/images/products/medium/1750239328-65943700.jpg", tags:["desktop","basics","light","desk", "security"], specs:"AMD Ryzen 3 | 8GB RAM | 256GB SSD | Integrated Graphics | Windows 11" },
+  { name: "Hawk Desktop PC",  price: "£449", url: "https://www.powerhouse.je/computing-c3/computing-c13/desktop-pcs-c16/hawk-desktop-pc-i3-16gb-ram-512gb-ssd-wifi-windows-11-p25348", img: "https://www.powerhouse.je/images/products/1750241973-50765600.jpg", tags: ["desktop", "work", "light", "desk", "performance"],
+  specs: "Intel Core i3 | 16GB RAM | 512GB SSD | Integrated Graphics | Windows 11"},
+  {name: "Ghost Desktop PC", price: "£549", url: "https://www.powerhouse.je/computing-c3/computing-c13/desktop-pcs-c16/ghost-desktop-pc-ryzen-5-rtx-3050-16gb-ram-512gb-ssd-wifi-windows-11-p25349", img: "https://www.powerhouse.je/images/products/1750256821-70671400.jpg", tags: ["desktop", "gaming", "performance", "heavy", "desk",],
+  specs: "AMD Ryzen 5 | 16GB RAM | 512GB SSD | NVIDIA RTX 3050 | Windows 11"},
+  {
+  name: "Fox Gaming PC",
+  price: "£799",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-pcs-c987/fox-gaming-pc-ryzen-5-rtx-5060-16gb-ram-512gb-ssd-wifi-windows-11-p25350",
+  img: "https://www.powerhouse.je/images/products/1750257249-27146400.jpg",
+  tags: ["desktop", "gaming", "performance", "heavy", "desk", "creating"],
+  specs: "AMD Ryzen 5 | 16GB RAM | 512GB SSD | NVIDIA RTX 5060 | Windows 11"
+},
+{
+  name: "Excalibur Gaming PC",
+  price: "£899",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/desktop-pcs-c16/excalibur-gaming-pc-ryzen-5-rtx-5060-ti-16gb-ram-1tb-ssd-windows-11-p25352",
+  img: "https://www.powerhouse.je/images/products/1750322201-84736100.jpg",
+  tags: ["desktop", "gaming", "performance", "heavy", "desk", "creating"],
+  specs: "AMD Ryzen 5 | 16GB RAM | 1TB SSD | NVIDIA RTX 5060 Ti | Windows 11"
+},
+{
+  name: "Diablo Gaming PC",
+  price: "£1499",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/desktop-pcs-c16/diablo-gaming-pc-i5-14400f-rtx-5070-32gb-ddr5-2tb-ssd-win-11-p25353",
+  img: "https://www.powerhouse.je/images/products/1750326086-53335400.jpg",
+  tags: ["desktop", "gaming", "performance", "heavy", "desk", "creating"],
+  specs: "Intel Core i5-14400F | 32GB DDR5 RAM | 2TB SSD | NVIDIA RTX 5070 | Windows 11"
+},
+{
+  name: "Cobra Gaming PC",
+  price: "£1999",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-pcs-c987/cobra-gaming-pc-i7-14700kf-rtx-5070-64gb-ddr5-2-5tb-ssd-liquid-cooling-win-11-p25354",
+  img: "https://www.powerhouse.je/images/products/medium/1750327455-22445800.jpg",
+  tags: ["desktop", "gaming", "performance", "heavy", "liquid-cooling", "desk", "creating"],
+  specs: "Intel Core i7-14700KF | 64GB DDR5 RAM | 2.5TB SSD | NVIDIA RTX 5070 | Liquid Cooling | Windows 11"
+},
+{
+  name: "Cloud White Gaming PC",
+  price: "£2199",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-pcs-c987/cloud-white-gaming-pc-ryzen-7-7700x-rtx-5070-64gb-ddr5-3tb-ssd-win-11-p25355",
+  img: "https://www.powerhouse.je/images/products/medium/1750328464-76183400.jpg",
+  tags: ["desktop", "gaming", "performance", "heavy", "desk", "creating", "security"],
+  specs: "AMD Ryzen 7 7700X | 64GB DDR5 RAM | 3TB SSD | NVIDIA RTX 5070 | Windows 11"
+},
+{
+  name: "Banshee Gaming PC",
+  price: "£2499",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-pcs-c987/banshee-gaming-pc-ryzen-7-7800x3d-rtx-5070-ti-64gb-ddr5-3tb-ssd-liquid-cooled-p25356",
+  img: "https://www.powerhouse.je/images/products/medium/1750329493-77074900.jpg",
+  tags: ["desktop", "gaming", "performance", "heavy", "liquid-cooling", "desk", "creating"],
+  specs: "AMD Ryzen 7 7800X3D | 64GB DDR5 RAM | 3TB SSD | NVIDIA RTX 5070 Ti | Liquid Cooling | Windows 11"
+},
+{
+  name: "Ark Gaming PC",
+  price: "£2999",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/desktop-pcs-c16/ark-gaming-pc-ryzen-9-9950x3d-rtx-5080-96gb-ddr5-4tb-gen5-ssd-liquid-cooled-p25357",
+  img: "https://www.powerhouse.je/images/products/medium/1750330937-94357100.jpg",
+  tags: ["desktop", "gaming", "performance", "heavy", "liquid-cooling", "desk", "creating", "security"],
+  specs: "AMD Ryzen 9 9950X3D | 96GB DDR5 RAM | 4TB Gen5 SSD | NVIDIA RTX 5080 | Liquid Cooling | Windows 11"
+},
+{
+  name: "Terra Mini PC N5105",
+  price: "£229",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/desktop-pcs-c16/1009939tmp-intel-celeron-n5105-quad-core-4-gb-ram-120-gb-ssd-p25527",
+  img: "https://www.powerhouse.je/images/products/medium/1752834032-75382200.jpg",
+  tags: ["desktop", "mini-pc", "light", "work", "basics", "desk", "security", "family"],
+  specs: "Intel Celeron N5105 | 4GB RAM | 120GB SSD | Integrated Graphics | Windows 11"
+},
+{
+  name: "MSI Pulse 16 Gaming Laptop",
+  price: "£1499",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-laptops-c809/msi-9s715p311002-pulse-16-intel-core-ultra-7-16gb-ram-1tb-ssd-nvidia-geforce-rtx-4060-win-11-gaming-laptop-p24470",
+  img: "https://www.powerhouse.je/images/products/medium/1727879534-86013000.jpg",
+  tags: ["laptop", "gaming", "performance", "portable", "dedicated-gpu", "heavy"],
+  specs: "Intel Core Ultra 7 | 16GB RAM | 1TB SSD | NVIDIA GeForce RTX 4060 | 16-inch | Windows 11"
+},
+{
+  name: "MSI Thin 15 Gaming Laptop",
+  price: "£749",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-laptops-c809/msi-9s716r8311251-thin-15-intel-core-i5-16gb-ram-512gb-ssd-nvidia-geforce-rtx-4050-win-11-gaming-laptop-p24471",
+  img: "https://www.powerhouse.je/images/products/medium/1727880576-16312400.jpg",
+  tags: ["laptop", "gaming", "portable", "dedicated-gpu", "heavy"],
+  specs: "Intel Core i5 | 16GB RAM | 512GB SSD | NVIDIA GeForce RTX 4050 | 15-inch | Windows 11"
+},
+{
+  name: "HP 250 G9 Laptop",
+  price: "£649",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/6q947esabu-250-g9-15-6-intel-core-i7-16gb-ram-512gb-ssd-win-11-laptop-p22737",
+  img: "https://www.powerhouse.je/images/products/medium/1719954752-86117200.jpg",
+  tags: ["laptop", "work", "business", "portable", "performance", "security"],
+  specs: "Intel Core i7 | 16GB RAM | 512GB SSD | Integrated Graphics | 15.6-inch | Windows 11"
+},
+{
+  name: "Samsung Galaxy Book2",
+  price: "£629",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/samsung-np641bedka4uk-galaxy-book2-14-intel-core-i5-16gb-ram-256gb-ssd-win-11-pro-laptop-p24539",
+  img: "https://www.powerhouse.je/images/products/medium/1728543328-70434700.jpg",
+  tags: ["laptop", "work", "portable", "business", "performance", "light"],
+  specs: "Intel Core i5 | 16GB RAM | 256GB SSD | Integrated Graphics | 14-inch | Windows 11 Pro"
+},
+{
+  name: "HP 17 Laptop",
+  price: "£499",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/hewlett-packard-9s9p7eaabu-17-cp2005na-17-3-amd-ryzen-3-8gb-ram-512gb-ssd-win-11-laptop-p24221",
+  img: "https://www.powerhouse.je/images/products/medium/1725608728-72235800.jpg",
+  tags: ["laptop", "home", "work", "large-screen", "portable", "family"],
+  specs: "AMD Ryzen 3 | 8GB RAM | 512GB SSD | Integrated Graphics | 17.3-inch | Windows 11"
+},
+{
+  name: "Lenovo V15 G4 Laptop",
+  price: "£499",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/83a100h9uk-v15-g4-15-6-intel-core-i5-16gb-ram-512gb-ssd-win-11-laptop-p24510",
+  img: "https://www.powerhouse.je/images/products/medium/1728376192-22815700.jpg",
+  tags: ["laptop", "work", "business", "portable", "light"],
+  specs: "Intel Core i5 | 16GB RAM | 512GB SSD | Integrated Graphics | 15.6-inch | Windows 11"
+},
+{
+  name: "Lenovo ThinkPad L490 Refurb",
+  price: "£399",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/refurbished-tech-c1261/lenovo-refurbished-thinkpad-l490-14-intel-core-i7-16gb-ram-512g-ssd-win-10-laptop-p22744",
+  img: "https://www.powerhouse.je/images/products/medium/1719954776-27680800.jpg",
+  tags: ["laptop", "work", "business", "refurbished", "portable", "light"],
+  specs: "Intel Core i7 | 16GB RAM | 512GB SSD | Integrated Graphics | 14-inch | Windows 10"
+},
+{
+  name: "HP 250 G9 Laptop (i3)",
+  price: "£399",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/hewlett-packard-250-g9-15-6-intel-core-i3-8gb-ram-256gb-ssd-win-11-laptop-p23393",
+  img: "https://www.powerhouse.je/images/products/medium/1719954752-86117200.jpg",
+  tags: ["laptop", "work", "portable", "budget", "light", "home-mobile"],
+  specs: "Intel Core i3 | 8GB RAM | 256GB SSD | 15.6-inch | Windows 11"
+},
+{
+  name: "Lenovo V14 Laptop (i3)",
+  price: "£349",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/lenovo-82c401awuk-v14-14-intel-core-i3-8gb-ram-256gb-ssd-win-10-pro-laptop-p23778",
+  img: "https://www.powerhouse.je/images/products/medium/1719954776-27680800.jpg",
+  tags: ["laptop", "work", "portable", "budget", "home-mobile"],
+  specs: "Intel Core i3 | 8GB RAM | 256GB SSD | 14-inch | Windows 10 Pro"
+},
+{
+  name: "ASUS BR1100F Flip Academic Laptop",
+  price: "£329",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/asus-br1100fcs81xa3y-flip-touch-screen-11-6-intel-celeron-n4500-8gb-ram-128g-ssd-win-11-pro-academic-laptop-p24544",
+  img: "https://www.powerhouse.je/images/products/1728548552-56434900.jpg",
+  tags: ["laptop", "touchscreen", "portable", "academic", "budget", "light", "home-mobile", "touch", "desk","family","work"],
+  specs: "Intel Celeron N4500 | 8GB RAM | 128GB SSD | 11.6-inch Touchscreen | Windows 11 Pro"
+},
+{
+  name: "ASUS VivoBook M1605",
+  price: "£499",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/m1605yamb296w-vivobook-m1605-16-amd-ryzen-r7-16gb-ram-512gb-ssd-win-11-laptop-p24808",
+  img: "https://www.powerhouse.je/images/products/1736757197-48636800.jpg",
+  tags: ["laptop", "work", "portable", "performance", "heavy", "home-mobile"],
+  specs: "AMD Ryzen 7 | 16GB RAM | 512GB SSD | 16-inch | Windows 11"
+},
+{
+  name: "MSI Pulse 17 AI Gaming Laptop",
+  price: "£1799",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-laptops-c809/9s717t311002-pulse-17-intel-core-ultra-9-ai-16gb-ram-1tb-ssd-nvidia-geforce-rtx4060-win-11-pro-gaming-laptop-p24821",
+  img: "https://www.powerhouse.je/images/products/1736926702-83244600.jpg",
+  tags: ["laptop", "gaming", "performance", "dedicated-gpu", "portable", "heavy", "home-mobile", "creating"],
+  specs: "Intel Core Ultra 9 AI | 16GB RAM | 1TB SSD | NVIDIA GeForce RTX 4060 | 17-inch | Windows 11 Pro"
+},
+{
+  name: "MSI Vector 17 Gaming Laptop",
+  price: "£2249",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-laptops-c809/9s717s372003-vector-17-intel-core-ultra-9-32gb-ram-2tb-ssd-nvidia-geforce-rtx5070ti-win-11-gaming-laptop-p24822",
+  img: "https://www.powerhouse.je/images/products/1736929875-23905300.jpg",
+  tags: ["laptop", "gaming", "performance", "dedicated-gpu", "entertainment", "portable", "heavy"],
+  specs: "Intel Core Ultra 9 | 32GB RAM | 2TB SSD | NVIDIA GeForce RTX 5070 Ti | 17-inch | Windows 11"
+},
+{
+  name: "MSI Vector 16 Gaming Laptop",
+  price: "£1899",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-laptops-c809/9s715m142629-vector-16-intel-core-i7-16gb-ram-1tb-ssd-nvidia-geforce-rtx4080-win-11-gaming-laptop-p24823",
+  img: "https://www.powerhouse.je/images/products/1736929875-23905300.jpg",
+  tags: ["laptop", "gaming", "performance", "dedicated-gpu", "heavy", "entertainment", "creating", "portable"],
+  specs: "Intel Core i7 | 16GB RAM | 1TB SSD | NVIDIA GeForce RTX 4080 | 16-inch | Windows 11"
+},
+{
+  name: "ASUS VivoBook 14 (i5, 16GB RAM)",
+  price: "£599",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/x1404vaeb076w-vivobook-14-intel-core-i5-16gb-ram-512gb-ssd-win-11-laptop-p24883",
+  img: "https://www.powerhouse.je/images/products/1738230205-61967300.jpg",
+  tags: ["laptop", "work", "portable", "performance", "creating", "home-mobile", "security"],
+  specs: "Intel Core i5 | 16GB RAM | 512GB SSD | 14-inch | Windows 11"
+},
+{
+  name: "ASUS VivoBook Go 14 E410 (Celeron, 4GB RAM)",
+  price: "£219",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/e410kaek217ws-vivobook-go-14-e410-intel-celeron-4gb-ram-128gb-ssd-win-11-laptop-p24885",
+  img: "https://www.powerhouse.je/images/products/1738233771-70021800.jpg",
+  tags: ["laptop", "budget", "portable", "home-mobile", "portable", "light"],
+  specs: "Intel Celeron | 4GB RAM | 128GB SSD | 14-inch | Windows 11"
+},
+{
+  name: "MSI Summit A16 AI+ (Ryzen R9, 32GB RAM)",
+  price: "£1499",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/9s7159k21027-summit-a16-16-ai-amd-ryzen-r9-32gb-ram-1tb-ssd-win-11-pro-laptop-p24886",
+  img: "https://www.powerhouse.je/images/products/1738234944-77312000.jpg",
+  tags: ["laptop", "business", "performance", "AI"],
+  specs: "AMD Ryzen R9 AI | 32GB RAM | 1TB SSD | 16-inch | Windows 11 Pro"
+},
+{
+  name: "MSI Vector 16 (Ultra 9, 32GB RAM, RTX 5080)",
+  price: "£2499",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-laptops-c809/9s715m352006-vector-16-16-intel-core-ultra-9-32gb-ram-1tb-ssd-nvidia-geforce-rtx-5080-win-11-gaming-laptop-p24975",
+  img: "https://www.powerhouse.je/images/products/1751274985-52050900.jpg",
+  tags: ["laptop", "gaming", "performance", "dedicated-gpu", "AI"],
+  specs: "Intel Core Ultra 9 | 32GB RAM | 1TB SSD | NVIDIA GeForce RTX 5080 | 16-inch | Windows 11"
+},
+{
+  name: "ASUS VivoBook 15 (i3, 8GB RAM, 512GB SSD)",
+  price: "£379",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/x1504zanj104w-vivobook-15-15-6-intel-core-i3-8gb-ram-512gb-ssd-win-11-laptop-p24980",
+  img: "https://www.powerhouse.je/images/products/1740002177-18507000.jpg",
+  tags: ["laptop", "work", "creating", "portable", "entertainment", "heavy"],
+  specs: "Intel Core i3 | 8GB RAM | 512GB SSD | 15.6-inch | Windows 11"
+},
+{
+  name: "MSI Katana 17 (i5, RTX3050)",
+  price: "699",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-laptops-c809/9s717l541071-katana-17-intel-core-i5-16gb-ram-1tb-ssd-nvidia-geforce-rtx3050-win-11-gaming-laptop-p24991",
+  img: "https://www.powerhouse.je/images/products/1740439899-80722800.jpg",
+  tags: ["laptop", "gaming", "performance", "dedicated-gpu", "entertainment", "heavy","portable"],
+  specs: "Intel Core i5 | 16GB RAM | 1TB SSD | NVIDIA GeForce RTX3050 | 17-inch | Windows 11"
+},
+{
+  name: "Lenovo IdeaPad Slim 3 (i5, 8GB RAM, 256GB SSD)",
+  price: "£399",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/83er00c1uk-ideapad-slim-3-15-6-intel-core-i5-8gb-ram-256gb-ssd-win-11-laptop-p25005",
+  img: "https://www.powerhouse.je/images/products/1740953224-09259700.jpg",
+  tags: ["laptop", "work", "portable", "family", "light"],
+  specs: "Intel Core i5 | 8GB RAM | 256GB SSD | 15.6-inch | Windows 11"
+},
+{
+  name: "Dell Inspiron 3530 (i5, 8GB RAM, 512GB SSD, Win 11 Pro)",
+  price: "£549",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/dell-inspiron3530-inspiron-3530-15-6-intel-core-i5-8gb-ram-512gb-ssd-win-11-pro-laptop-p25048",
+  img: "https://www.powerhouse.je/images/products/1741738991-66897100.jpg",
+  tags: ["laptop", "work", "business", "portable", "anywhere"],
+  specs: "Intel Core i5 | 8GB RAM | 512GB SSD | 15.6-inch | Windows 11 Pro"
+},
+{
+  name: "Samsung Galaxy Book4 Edge 14 (Snapdragon X Elite)",
+  price: "£999",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/windows-laptops-c15/samsung-np944xmamb1uk-galaxy-book4-edge-14-snapdragon-x-elite-16gb-ram-512gb-win-11-laptop-p25183",
+  img: "https://www.powerhouse.je/images/products/1751275300-76155200.jpg",
+  tags: ["laptop", "portable", "AI", "Snapdragon", "creating", "home-mobile"],
+  specs: "Snapdragon X Elite | 16GB RAM | 512GB SSD | 14-inch | Windows 11"
+},
+{
+  name: "MSI Prestige 13 AI Evo (Ultra 7, 32GB RAM)",
+  price: "£1299",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/gaming-laptops-c809/9s713q222034-msi-prestige-13-ai-evo-13-3-intel-core-ultra-7-32gb-ram-1tb-ssd-windows-11-laptop-p25231",
+  img: "https://www.powerhouse.je/images/products/1747924976-17796200.jpg",
+  tags: ["laptop", "ultralight", "AI", "performance", "creating", "portable","anywhere"],
+  specs: "Intel Core Ultra 7 | 32GB RAM | 1TB SSD | 13.3-inch | Windows 11"
+},
+{
+  name: "ASUS A3402WVAKWPC101W All-in-One PC (i5-1335U, 23.8\" FHD)",
+  price: "£549",
+  url: "https://www.powerhouse.je/computing-c3/computing-c13/all-in-one-pcs-c17/a3402wvakwpc101w-all-in-one-pc-intel-core-i5-1335u-23-8-fhd-white-p25502",
+  img: "https://www.powerhouse.je/images/products/1752661682-35740900.jpg",
+  tags: ["all-in-one", "desktop", "performance", "desk", "family", "heavy", "light","creating"],
+  specs: "Intel Core i5-1335U | 8GB RAM | 512GB SSD | 23.8-inch FHD | White"
+}
+  // ... (add all other product objects here, as shown in previous messages)
+];
+
+const answerIcons = {
+  basics: 'fa-solid fa-house',
+  entertainment: 'fa-solid fa-film',
+  gaming: 'fa-solid fa-gamepad',
+  work: 'fa-solid fa-briefcase',
+  creating: 'fa-solid fa-paint-brush',
+  family: 'fa-solid fa-users',
+  light: 'fa-regular fa-lightbulb',
+  heavy: 'fa-solid fa-dumbbell',
+  desk: 'fa-solid fa-desktop',
+  'home-mobile': 'fa-solid fa-home',
+  anywhere: 'fa-solid fa-wifi',
+  screen: 'fa-solid fa-display',
+  touch: 'fa-solid fa-hand-pointer',
+  portable: 'fa-solid fa-suitcase',
+  performance: 'fa-solid fa-bolt',
+  security: 'fa-solid fa-shield-halved',
+  unsure: 'fa-regular fa-circle-question'
+};
+
+const tagBadges = {
+  "large-screen": {icon:"fa-solid fa-display", label:"Large Screen"},
+  "security":{icon:"fa-solid fa-shield-halved",label:"Security"},
+  "touch":{icon:"fa-solid fa-hand-pointer",label:"Touch"},
+  "portable":{icon:"fa-solid fa-suitcase",label:"Portable"},
+  "gaming":{icon:"fa-solid fa-gamepad",label:"Gaming"},
+  "performance":{icon:"fa-solid fa-bolt",label:"Performance"},
+  "family":{icon:"fa-solid fa-users",label:"Family"},
+  "work":{icon:"fa-solid fa-briefcase",label:"Work"},
+  "creating":{icon:"fa-solid fa-paint-brush",label:"Creating"},
+  "entertainment":{icon:"fa-solid fa-film",label:"Entertainment"}
+};
+
+const questions = [
+  {
+    id: 1, title: "What will you use your PC for most?", subtitle: "Choose up to 2 options.", max: 2,
+    options: [
+      {value:'basics',label:'Just the basics'},
+      {value:'entertainment',label:'Entertainment'},
+      {value:'gaming',label:'Gaming'},
+      {value:'work',label:'Work or school'},
+      {value:'creating',label:'Creating'},
+      {value:'family',label:'Family'}
+    ]
+  },
+  {
+    id: 2, title: "How would you describe your workload?", subtitle: "Choose one.", max: 1,
+    options: [
+      {value:'light',label:'Light'},
+      {value:'heavy',label:'Heavy'}
+    ]
+  },
+  {
+    id: 3, title: "Where do you plan to use your PC?", subtitle: "Choose one.", max: 1,
+    options: [
+      {value:'desk',label:'Always at my desk'},
+      {value:'home-mobile',label:'At home, but I move around'},
+      {value:'anywhere',label:'Anywhere with a wireless connection'}
+    ]
+  },
+  {
+    id: 4, title: "What’s most important to you when looking for a PC?", subtitle: "Choose one.", max: 1,
+    options: [
+      {value:'screen',label:'Larger screen size'},
+      {value:'touch',label:'Interactive screen'},
+      {value:'portable',label:'Portability'},
+      {value:'performance',label:'Performance'},
+      {value:'security',label:'Security'},
+      {value:'unsure',label:'I’m not sure yet'}
+    ]
+  },
+];
+function getBestMatch(selectedTags, products) {
+  // Check for 'touch screen' or 'interactive screen'
+  const touchTags = ["touch screen", "interactive screen"];
+  if (selectedTags.some(tag => touchTags.includes(tag))) {
+    const br1100f = products.find(p =>
+      p.name.toLowerCase().includes("br1100f flip academic laptop")
+    );
+    // Remove it from the list (if present) and put it first
+    const rest = products.filter(p => p !== br1100f);
+    return br1100f ? [br1100f, ...rest] : rest;
+  }
+  // Normal filtering logic otherwise
+  return filterProductsByTags(selectedTags, products);
+}
+
+function iconHtml(icon) { return `<i class="${icon}"></i>`; }
+function toggleDark() {
+  darkMode = !darkMode;
+  document.documentElement.classList.toggle("dark",darkMode);
+  document.getElementById("darkToggleIcon").className = darkMode ? "fa-solid fa-moon" : "fa-solid fa-sun";
+}
+window.toggleDark = toggleDark;
+
+function renderBadges(tags) {
+  return tags.map(t=>{
+    let badge = tagBadges[t];
+    return badge ? `<span class="badge">${iconHtml(badge.icon)}${badge.label}</span>` : "";
+  }).join('');
+}
+
+window.emailShortlist = function() {
+  if(!matchResults) return;
+  const subject = encodeURIComponent("My PC Matchmaker Shortlist");
+  const body = encodeURIComponent(matchResults.slice(0,3).map(p=>`${p.name}: ${p.url}`).join('\n'));
+  window.open(`mailto:?subject=${subject}&body=${body}`,"_blank");
+};
+
+function renderProgress() {
+  const maxStep = Math.min(step+1, questions.length);
+  const dots = questions.map((q,i)=>`<span class="step-dot${i===step?' active':''}"></span>`).join('');
+  const percent = (maxStep/questions.length)*100;
+  return `<div class="quiz-progress">
+    ${dots}
+    <div class="progress-bar"><div class="progress-bar-fill" style="width:${percent}%"></div></div>
+    <span class="progress-text">Step ${maxStep} of ${questions.length}</span>
+  </div>`;
+}
+
+function renderReview() {
+  const container = document.getElementById('pc-quiz');
+  container.innerHTML = renderProgress();
+
+  let reviewHtml = `<div class="quiz-review"><strong>Review your choices:</strong><br>`;
+  Object.entries(answers).forEach(([qid,vals])=>{
+    const q = questions.find(x=>x.id==qid);
+    if(q) reviewHtml += `<span class="review-badge">${q.title}: ${vals.map(v=>q.options.find(o=>o.value==v)?.label||v).join(', ')}</span>`;
+  });
+  reviewHtml += `<br>
+    <button class="pc-btn" id="editBtn">Edit Answers</button>
+    <button class="pc-btn" id="resultsBtn">Show Results</button>
+    </div>`;
+  container.innerHTML += reviewHtml;
+
+  document.getElementById('editBtn').onclick = function() {
+    reviewMode = false;
+    renderQuiz();
+  };
+  document.getElementById('resultsBtn').onclick = function() {
+    reviewMode = false;
+    step = questions.length;
+    renderQuiz(true);
+  };
+}
+
+function renderWelcome() {
+  document.getElementById('pc-quiz').innerHTML = `
+    <div class="welcome-screen">
+      <div class="powerhouse-title">Welcome to the Powerhouse's Computer Matchmaker</div>
+      <p style="font-size:1.13em;color:#444;">Let's find your perfect device!<br><small>(We'll personalise your experience)</small></p>
+      <input type="text" id="nameInput" placeholder="Your first name" autocomplete="given-name" />
+      <button class="pc-btn" id="startBtn" disabled>Start Quiz</button>
+    </div>
+  `;
+  const input = document.getElementById('nameInput');
+  const startBtn = document.getElementById('startBtn');
+  input.addEventListener('input', function() {
+    startBtn.disabled = !input.value.trim();
+  });
+  startBtn.onclick = function() {
+    userName = input.value.trim();
+    welcomeStep = false;
+    renderQuiz();
+  };
+  input.addEventListener('keyup', function(e){
+    if(e.key==="Enter" && input.value.trim()){
+      startBtn.click();
+    }
+  });
+}
+
+function renderQuiz(showResultsNow) {
+  const container = document.getElementById('pc-quiz');
+  if(welcomeStep) {
+    renderWelcome();
+    return;
+  }
+  if(step<questions.length && !reviewMode) {
+    container.innerHTML = renderProgress();
+    container.innerHTML += `<div class="greet-user">Hi ${userName}, let's find your best PC match!</div>`;
+    const q = questions[step];
+    let card = document.createElement('div');
+    card.className = 'pc-question';
+    card.innerHTML = `<h3 style="font-size:1.4em;">${q.title}</h3><p style="margin-bottom:12px;color:#666;font-size:1.06em;">${q.subtitle}</p>
+      <div class="pc-options">${q.options.map(opt=>{
+        const selected = (answers[q.id]||[]).includes(opt.value) ? 'active':'';
+        return `<div class="pc-option ${selected}" data-val="${opt.value}" role="button" aria-label="${opt.label}">
+          ${iconHtml(answerIcons[opt.value])}<span style="font-size:1.08em;">${opt.label}</span></div>`;
+      }).join('')}</div>
+      <div class="pc-nav">
+        <button class="pc-btn" id="backBtn" ${step===0?'disabled':''}>Previous</button>
+        <button class="pc-btn" id="nextBtn">${step===questions.length-1?'Review answers':'Next'}</button>
+      </div>`;
+    container.appendChild(card);
+    document.querySelectorAll('.pc-option').forEach(el=>{
+      el.addEventListener('click',()=>{
+        const val = el.getAttribute('data-val');
+        const selected = answers[q.id]||[];
+        if(q.max===1) answers[q.id]=[val];
+        else {
+          if(selected.includes(val)) answers[q.id]=selected.filter(v=>v!==val);
+          else if(selected.length<q.max) answers[q.id]=[...selected,val];
+        }
+        renderQuiz();
+      });
+    });
+    document.getElementById('backBtn').onclick=()=>{step--;renderQuiz();};
+    document.getElementById('nextBtn').onclick=()=>{
+      if((answers[q.id]||[]).length===0) return;
+      if(step===questions.length-1) {reviewMode=true;renderReview();}
+      else {step++;renderQuiz();}
+    };
+  } else if(reviewMode && !showResultsNow) {
+    renderReview();
+  } else {
+    // Show Results
+    const selectedTags = Object.values(answers).flat();
+    const weights = { 'screen':2, 'security':2, 'touch':2, 'portable':2, 'gaming':2, 'performance':2, 'heavy':2 };
+    let scored = products.map(p=>{
+      let score = 0, why=[];
+      selectedTags.forEach(t=>{
+        if(p.tags.includes(t)) {
+          score+= weights[t]||1;
+          why.push(t);
+        }
+      });
+      return {...p,score,why};
+    }).sort((a,b)=>b.score-a.score);
+
+    errorMatch = !scored.length || scored[0].score===0;
+    matchResults = scored;
+    let resultHtml = `<div class="pc-results">`;
+    if(errorMatch) resultHtml += `<div class="error-message">No exact match found, but here are great alternatives!</div>`;
+    if(scored.length) {
+      let best = scored[0], similar = scored.slice(1,3);
+      resultHtml += `<h3>Your Best Match</h3>
+        <div class="pc-card">
+          <img class="pc-card-img" src="${best.img}" alt="${best.name}" aria-label="${best.name}">
+          <div class="pc-card-content">
+            <div class="pc-title">${best.name}</div>
+            <div class="pc-badges">${renderBadges(best.tags)}</div>
+            <div class="pc-specs">${best.specs}</div>
+            <div class="pc-price"><strong>${best.price}</strong></div>
+            <div class="pc-actions">
+              <a class="buy-btn" href="${best.url}" target="_blank" rel="noopener">Buy Now</a>
+              <button class="email-btn" onclick="emailShortlist()">Email My Results</button>
+            </div>
+          </div>
+        </div>`;
+      resultHtml += `<h4 style="margin-top:20px;">Similar PCs</h4>`;
+      similar.forEach(p=>{
+        resultHtml += `<div class="pc-card">
+          <img class="pc-card-img" src="${p.img}" alt="${p.name}" aria-label="${p.name}">
+          <div class="pc-card-content">
+            <div class="pc-title">${p.name}</div>
+            <div class="pc-badges">${renderBadges(p.tags)}</div>
+            <div class="pc-specs">${p.specs}</div>
+            <div class="pc-price"><strong>${p.price}</strong></div>
+            <div class="pc-actions">
+              <a class="buy-btn" href="${p.url}" target="_blank" rel="noopener">Buy Now</a>
+              <button class="email-btn" onclick="emailShortlist()">Email My Results</button>
+            </div>
+          </div>
+        </div>`;
+      });
+    } else {
+      resultHtml += `<div class="error-message">Sorry, no products match your criteria. Please <button class="pc-btn" onclick="location.reload()">retake the quiz</button>.</div>`;
+    }
+    resultHtml += `<div class="pc-nav" style="margin-top:20px;"><button class="pc-btn" onclick="location.reload()">Retake Quiz</button></div>`;
+    resultHtml += `</div>`;
+    container.innerHTML = renderProgress() + resultHtml;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  renderQuiz();
+});
+</script>
+</body>
+</html>
